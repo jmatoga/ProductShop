@@ -1,5 +1,6 @@
 package jm.order_service.infrastructure.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
@@ -9,8 +10,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMqConfig {
-    @Value("${messaging.exchange.order-events}")
-    private String orderEventsExchange;
+    public static final String ORDER_EVENTS_EXCHANGE = "order-events-exchange";
 
     @Bean
     public Queue cartCheckedOutQueue() {
@@ -19,7 +19,7 @@ public class RabbitMqConfig {
 
     @Bean
     public DirectExchange orderEventsExchange() {
-        return new DirectExchange(orderEventsExchange);
+        return new DirectExchange(ORDER_EVENTS_EXCHANGE, true, false);
     }
 
     @Bean
@@ -30,7 +30,7 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public MessageConverter jsonMessageConverter(ObjectMapper objectMapper) {
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }

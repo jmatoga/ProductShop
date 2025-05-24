@@ -34,6 +34,9 @@ public class CartItem {
     @Min(0)
     private double price;
 
+    @Enumerated(EnumType.STRING)
+    private ECartItemStatus status = ECartItemStatus.PROCESSING;
+
     @Column(nullable = false)
     @CreatedDate
     private Instant createdAt = Instant.now();

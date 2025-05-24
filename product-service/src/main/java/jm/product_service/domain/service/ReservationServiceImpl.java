@@ -36,8 +36,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    @Override
-    public Optional<Reservation> getReservation(UUID cartId, UUID productId) {
+    private Optional<Reservation> getReservation(UUID cartId, UUID productId) {
         return reservationRepository.findByCartIdAndProductId(cartId, productId);
     }
 

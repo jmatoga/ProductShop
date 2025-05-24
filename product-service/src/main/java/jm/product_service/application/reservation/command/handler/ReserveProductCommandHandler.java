@@ -18,6 +18,9 @@ public class ReserveProductCommandHandler {
     public void handle(ReserveProductCommand cmd) {
         Product product = productRepository.findByIdForUpdate(cmd.productId())
                             .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        if(product.getQuantity() < cmd.quantity()) {
+            throw new IllegalArgumentException("Not enough product quantity available for reservation");
+        }
         product.decreaseQuantity(cmd.quantity());
         reservationService.addOrUpdateReservation(cmd.cartId(), cmd.productId(), cmd.quantity());
         productRepository.save(product);

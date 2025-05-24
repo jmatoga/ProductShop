@@ -2,30 +2,26 @@ package jm.cart_service.infrastructure.config;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 @Configuration
 public class RabbitMqConfig {
-    @Value("${messaging.exchange.cart-events}")
-    private String cartExchange;
-
-    @Value("${messaging.exchange.order-events}")
-    private String orderExchange;
+    public static final String CART_EVENTS_EXCHANGE_KEY = "cart.events.exchange";
+    public static final String ORDER_EVENTS_EXCHANGE_KEY = "order.events.exchange";
 
     @Bean
     public TopicExchange cartEventsExchange() {
-        return new TopicExchange(cartExchange, true, false);
+        return new TopicExchange(CART_EVENTS_EXCHANGE_KEY, true, false);
     }
 
     @Bean
     public DirectExchange orderEventsExchange() {
-        return new DirectExchange(orderExchange, true, false);
+        return new DirectExchange(ORDER_EVENTS_EXCHANGE_KEY, true, false);
     }
 
     @Bean
@@ -109,14 +105,6 @@ public class RabbitMqConfig {
 
     @Bean
     public Declarables declarables() {
-        return new Declarables(
-                cartEventsExchange(),
-                orderEventsExchange(),
-                cartCreatedQueue(),
-                productReservedQueue(),
-                productRemovedQueue(),
-                cartExpiredQueue(),
-                cartCheckedoutQueue()
-        );
+        return new Declarables(cartEventsExchange(), orderEventsExchange(), cartCreatedQueue(), productReservedQueue(), productRemovedQueue(), cartExpiredQueue(), cartCheckedoutQueue());
     }
 }

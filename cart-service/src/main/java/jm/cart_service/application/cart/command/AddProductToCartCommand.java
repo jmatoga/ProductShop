@@ -5,4 +5,4 @@ import lombok.Builder;
 import java.util.UUID;
 
 @Builder
-public record AddProductToCartCommand(UUID userId, UUID productId, int quantity) {}
+public record AddProductToCartCommand(UUID userId, UUID productId, int quantity, double price) {}

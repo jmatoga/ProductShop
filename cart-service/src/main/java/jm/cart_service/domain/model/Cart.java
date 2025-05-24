@@ -2,8 +2,8 @@ package jm.cart_service.domain.model;
 
 import jakarta.persistence.*;
 import jm.cart_service.domain.event.CartExpiredEvent;
-import jm.cart_service.domain.event.ProductRemovedEvent;
-import jm.cart_service.domain.event.ProductReservedEvent;
+import jm.common.event.ProductRemovedEvent;
+import jm.common.event.ProductReservedEvent;
 import jm.common.event.CartCheckedOutEvent;
 import lombok.Getter;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -27,7 +27,7 @@ public class Cart {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private jm.cart_service.domain.model.ECartStatus status = jm.cart_service.domain.model.ECartStatus.ACTIVE;
+    private ECartStatus status = ECartStatus.ACTIVE;
 
     @Column(nullable = false)
     @CreatedDate
@@ -39,7 +39,7 @@ public class Cart {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "cart_id")
-    private List<jm.cart_service.domain.model.CartItem> items = new ArrayList<>();
+    private List<CartItem> items = new ArrayList<>();
 
     @Transient // pomija pole w zapisie do bazy (zdarzenia domenowe publikowane za pomocą publishera na kolejkę)
     private final List<Object> domainEvents = new ArrayList<>();
@@ -48,50 +48,42 @@ public class Cart {
     public static Cart create(UUID userId) {
         Cart cart = new Cart();
         cart.userId = userId;
-        cart.status = jm.cart_service.domain.model.ECartStatus.ACTIVE;
+        cart.status = ECartStatus.ACTIVE;
         cart.createdAt = Instant.now();
         cart.updatedAt = Instant.now();
-
         return cart;
     }
 
     public void addProduct(UUID productId, int quantity, double price) {
         ensureActive();
-        jm.cart_service.domain.model.CartItem existing = items.stream()
-                                    .filter(i -> i.getProductId().equals(productId))
+        CartItem existing = items.stream()
+                                    .filter(item -> item.getProductId().equals(productId))
                                     .findFirst()
                                     .orElse(null);
 
         if (existing != null) {
             existing.increaseQuantity(quantity);
         } else {
-            items.add(jm.cart_service.domain.model.CartItem.builder()
-                    .cartId(id)
-                    .productId(productId)
-                    .quantity(quantity)
-                    .price(price)
-                    .build());
+            items.add(CartItem.builder()
+                              .cartId(id)
+                              .productId(productId)
+                              .quantity(quantity)
+                              .price(price)
+                              .build());
         }
         this.updatedAt = Instant.now();
         // rejestracja zdarzenia
-        this.domainEvents.add(new ProductReservedEvent(this.id, productId, quantity));
+        this.domainEvents.add(new ProductReservedEvent(items.getLast().getId(), this.id, productId, quantity));
     }
 
     public void removeProduct(UUID productId, int quantity) {
         ensureActive();
-        jm.cart_service.domain.model.CartItem existing = items.stream()
-                                    .filter(i -> i.getProductId().equals(productId))
-                                    .findFirst()
-                                    .orElseThrow(() -> new IllegalArgumentException("Product " + productId + " not in cart"));
-
         if (quantity < 0) {
             throw new IllegalArgumentException("Quantity must be positive");
         }
-        if (quantity >= existing.getQuantity()) {
-            items.remove(existing);
-            domainEvents.add(new ProductRemovedEvent(this.id, productId, existing.getQuantity()));
+        else if (quantity == 0) {
+            return;
         } else {
-            existing.decreaseQuantity(quantity);
             domainEvents.add(new ProductRemovedEvent(this.id, productId, quantity));
         }
         this.updatedAt = Instant.now();
@@ -100,13 +92,13 @@ public class Cart {
     // finalizacja koszyka
     public void checkout() {
         ensureActive();
-        this.status = jm.cart_service.domain.model.ECartStatus.CHECKED_OUT;
+        this.status = ECartStatus.CHECKED_OUT;
         this.updatedAt = Instant.now();
         domainEvents.add(new CartCheckedOutEvent(this.id, this.userId));
     }
 
     private void ensureActive() {
-        if (this.status != jm.cart_service.domain.model.ECartStatus.ACTIVE) {
+        if (this.status != ECartStatus.ACTIVE) {
             throw new IllegalStateException("Cart is not active: " + status);
         }
     }
@@ -119,10 +111,10 @@ public class Cart {
     }
 
     public void expire() {
-        if (this.status != jm.cart_service.domain.model.ECartStatus.ACTIVE)
+        if (this.status != ECartStatus.ACTIVE) {
             return;
-
-        this.status = jm.cart_service.domain.model.ECartStatus.EXPIRED;
+        }
+        this.status = ECartStatus.EXPIRED;
         this.updatedAt = Instant.now();
         this.domainEvents.add(new CartExpiredEvent(this.id, this.userId));
     }
