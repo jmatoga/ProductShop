@@ -3,3 +3,5 @@ include 'common'
 include 'cart-service'
 include 'order-service'
 include 'product-service'
+include 'api-gateway'
+
